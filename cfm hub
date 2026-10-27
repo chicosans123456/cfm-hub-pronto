@@ -1,0 +1,484 @@
+-- Cfm hub
+-- Versão leve + estável
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
+local VirtualUser = game:GetService("VirtualUser")
+local Lighting = game:GetService("Lighting")
+local CoreGui = game:GetService("CoreGui")
+
+local LocalPlayer = Players.LocalPlayer
+local Character, Humanoid, Root
+
+local function Refresh()
+    Character = LocalPlayer.Character
+    if Character then
+        Humanoid = Character:FindFirstChildOfClass("Humanoid")
+        Root = Character:FindFirstChild("HumanoidRootPart")
+    else
+        Humanoid, Root = nil, nil
+    end
+end
+Refresh()
+
+LocalPlayer.CharacterAdded:Connect(function()
+    task.wait(0.5)
+    Refresh()
+end)
+
+LocalPlayer.Idled:Connect(function()
+    VirtualUser:CaptureController()
+    VirtualUser:ClickButton2(Vector2.new())
+end)
+
+local Config = {
+    KillAura = false,
+    KillAuraRange = 60,
+    SuperPunch = false,
+    BringNPC = false,
+    AutoFarm = false,
+    AttackPlayers = false,
+    ESP = false,
+    ESPPlayers = false,
+    FPSBoost = false,
+    InfiniteJump = false,
+    Noclip = false,
+    Speed = 16
+}
+
+-- ================= UI =================
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "cfm hub"
+ScreenGui.ResetOnSpawn = false
+pcall(function() ScreenGui.Parent = CoreGui end)
+if not ScreenGui.Parent then ScreenGui.Parent = LocalPlayer:WaitForChild("PlayerGui") end
+
+local Main = Instance.new("Frame")
+Main.Size = UDim2.new(0, 500, 0, 400)
+Main.Position = UDim2.new(0.5, -250, 0.5, -200)
+Main.BackgroundColor3 = Color3.fromRGB(11, 11, 17)
+Main.BorderSizePixel = 0
+Main.Active = true
+Main.Draggable = true
+Main.Parent = ScreenGui
+Instance.new("UICorner", Main).CornerRadius = UDim.new(0, 12)
+
+local stroke = Instance.new("UIStroke", Main)
+stroke.Color = Color3.fromRGB(150, 70, 255)
+stroke.Thickness = 1.5
+stroke.Transparency = 0.3
+
+local Header = Instance.new("Frame", Main)
+Header.Size = UDim2.new(1, 0, 0, 50)
+Header.BackgroundColor3 = Color3.fromRGB(17, 13, 27)
+Header.BorderSizePixel = 0
+Instance.new("UICorner", Header).CornerRadius = UDim.new(0, 12)
+
+local Logo = Instance.new("TextLabel", Header)
+Logo.Size = UDim2.new(0, 42, 0, 42)
+Logo.Position = UDim2.new(0, 8, 0, 4)
+Logo.BackgroundTransparency = 1
+Logo.Text = "👻"
+Logo.TextSize = 30
+Logo.Font = Enum.Font.GothamBold
+
+local Title = Instance.new("TextLabel", Header)
+Title.Size = UDim2.new(1, -110, 1, 0)
+Title.Position = UDim2.new(0, 52, 0, 0)
+Title.BackgroundTransparency = 1
+Title.Text = "Fantasminha Menu Blox Fruits"
+Title.TextColor3 = Color3.fromRGB(205, 160, 255)
+Title.TextSize = 16
+Title.Font = Enum.Font.GothamBold
+Title.TextXAlignment = Enum.TextXAlignment.Left
+
+local CloseBtn = Instance.new("TextButton", Header)
+CloseBtn.Size = UDim2.new(0, 32, 0, 32)
+CloseBtn.Position = UDim2.new(1, -40, 0, 9)
+CloseBtn.BackgroundColor3 = Color3.fromRGB(42, 20, 52)
+CloseBtn.Text = "✕"
+CloseBtn.TextColor3 = Color3.fromRGB(255, 110, 150)
+CloseBtn.TextSize = 15
+CloseBtn.Font = Enum.Font.GothamBold
+Instance.new("UICorner", CloseBtn).CornerRadius = UDim.new(0, 7)
+CloseBtn.MouseButton1Click:Connect(function() ScreenGui:Destroy() end)
+
+local TabFrame = Instance.new("Frame", Main)
+TabFrame.Size = UDim2.new(0, 115, 1, -58)
+TabFrame.Position = UDim2.new(0, 7, 0, 54)
+TabFrame.BackgroundColor3 = Color3.fromRGB(15, 12, 23)
+TabFrame.BorderSizePixel = 0
+Instance.new("UICorner", TabFrame).CornerRadius = UDim.new(0, 9)
+
+local TabList = Instance.new("UIListLayout", TabFrame)
+TabList.Padding = UDim.new(0, 5)
+local TabPad = Instance.new("UIPadding", TabFrame)
+TabPad.PaddingTop = UDim.new(0, 7)
+TabPad.PaddingLeft = UDim.new(0, 5)
+TabPad.PaddingRight = UDim.new(0, 5)
+
+local Content = Instance.new("Frame", Main)
+Content.Size = UDim2.new(1, -135, 1, -64)
+Content.Position = UDim2.new(0, 128, 0, 56)
+Content.BackgroundTransparency = 1
+
+local CurrentTab = nil
+
+local function MakeTab(name, icon)
+    local btn = Instance.new("TextButton", TabFrame)
+    btn.Size = UDim2.new(1, 0, 0, 36)
+    btn.BackgroundColor3 = Color3.fromRGB(24, 18, 40)
+    btn.Text = icon .. "  " .. name
+    btn.TextColor3 = Color3.fromRGB(185, 145, 255)
+    btn.TextSize = 13
+    btn.Font = Enum.Font.GothamMedium
+    btn.TextXAlignment = Enum.TextXAlignment.Left
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 7)
+    Instance.new("UIPadding", btn).PaddingLeft = UDim.new(0, 9)
+
+    local page = Instance.new("ScrollingFrame", Content)
+    page.Size = UDim2.new(1, 0, 1, 0)
+    page.BackgroundTransparency = 1
+    page.ScrollBarThickness = 3
+    page.ScrollBarImageColor3 = Color3.fromRGB(145, 70, 255)
+    page.Visible = false
+    page.CanvasSize = UDim2.new(0, 0, 0, 0)
+    page.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    Instance.new("UIListLayout", page).Padding = UDim.new(0, 6)
+    Instance.new("UIPadding", page).PaddingTop = UDim.new(0, 3)
+
+    local tab = {Button = btn, Page = page}
+    btn.MouseButton1Click:Connect(function()
+        if CurrentTab then
+            CurrentTab.Page.Visible = false
+            CurrentTab.Button.BackgroundColor3 = Color3.fromRGB(24, 18, 40)
+        end
+        page.Visible = true
+        btn.BackgroundColor3 = Color3.fromRGB(52, 30, 95)
+        CurrentTab = tab
+    end)
+    if not CurrentTab then
+        page.Visible = true
+        btn.BackgroundColor3 = Color3.fromRGB(52, 30, 95)
+        CurrentTab = tab
+    end
+    return tab
+end
+
+local function MakeToggle(tab, text, default, callback)
+    local frame = Instance.new("Frame", tab.Page)
+    frame.Size = UDim2.new(1, -6, 0, 38)
+    frame.BackgroundColor3 = Color3.fromRGB(19, 15, 30)
+    frame.BorderSizePixel = 0
+    Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 7)
+
+    local label = Instance.new("TextLabel", frame)
+    label.Size = UDim2.new(1, -58, 1, 0)
+    label.Position = UDim2.new(0, 11, 0, 0)
+    label.BackgroundTransparency = 1
+    label.Text = text
+    label.TextColor3 = Color3.fromRGB(225, 205, 255)
+    label.TextSize = 13
+    label.Font = Enum.Font.Gotham
+    label.TextXAlignment = Enum.TextXAlignment.Left
+
+    local btn = Instance.new("TextButton", frame)
+    btn.Size = UDim2.new(0, 42, 0, 23)
+    btn.Position = UDim2.new(1, -50, 0.5, -11.5)
+    btn.BackgroundColor3 = default and Color3.fromRGB(125, 55, 225) or Color3.fromRGB(38, 33, 55)
+    btn.Text = ""
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(1, 0)
+
+    local circle = Instance.new("Frame", btn)
+    circle.Size = UDim2.new(0, 17, 0, 17)
+    circle.Position = default and UDim2.new(1, -20, 0.5, -8.5) or UDim2.new(0, 3, 0.5, -8.5)
+    circle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    circle.BorderSizePixel = 0
+    Instance.new("UICorner", circle).CornerRadius = UDim.new(1, 0)
+
+    local on = default
+    btn.MouseButton1Click:Connect(function()
+        on = not on
+        btn.BackgroundColor3 = on and Color3.fromRGB(125, 55, 225) or Color3.fromRGB(38, 33, 55)
+        circle.Position = on and UDim2.new(1, -20, 0.5, -8.5) or UDim2.new(0, 3, 0.5, -8.5)
+        callback(on)
+    end)
+end
+
+local function MakeSlider(tab, text, min, max, default, callback)
+    local frame = Instance.new("Frame", tab.Page)
+    frame.Size = UDim2.new(1, -6, 0, 52)
+    frame.BackgroundColor3 = Color3.fromRGB(19, 15, 30)
+    frame.BorderSizePixel = 0
+    Instance.new("UICorner", frame).CornerRadius = UDim.new(0, 7)
+
+    local label = Instance.new("TextLabel", frame)
+    label.Size = UDim2.new(1, -18, 0, 20)
+    label.Position = UDim2.new(0, 11, 0, 4)
+    label.BackgroundTransparency = 1
+    label.Text = text .. ": " .. default
+    label.TextColor3 = Color3.fromRGB(225, 205, 255)
+    label.TextSize = 13
+    label.Font = Enum.Font.Gotham
+    label.TextXAlignment = Enum.TextXAlignment.Left
+
+    local bg = Instance.new("Frame", frame)
+    bg.Size = UDim2.new(1, -22, 0, 7)
+    bg.Position = UDim2.new(0, 11, 0, 32)
+    bg.BackgroundColor3 = Color3.fromRGB(40, 30, 60)
+    bg.BorderSizePixel = 0
+    Instance.new("UICorner", bg).CornerRadius = UDim.new(1, 0)
+
+    local fill = Instance.new("Frame", bg)
+    fill.Size = UDim2.new((default - min) / (max - min), 0, 1, 0)
+    fill.BackgroundColor3 = Color3.fromRGB(145, 70, 255)
+    fill.BorderSizePixel = 0
+    Instance.new("UICorner", fill).CornerRadius = UDim.new(1, 0)
+
+    local hold = false
+    bg.InputBegan:Connect(function(i)
+        if i.UserInputType == Enum.UserInputType.MouseButton1 then hold = true end
+    end)
+    UserInputService.InputEnded:Connect(function(i)
+        if i.UserInputType == Enum.UserInputType.MouseButton1 then hold = false end
+    end)
+    UserInputService.InputChanged:Connect(function(i)
+        if hold and i.UserInputType == Enum.UserInputType.MouseMovement then
+            local rel = math.clamp((UserInputService:GetMouseLocation().X - bg.AbsolutePosition.X) / bg.AbsoluteSize.X, 0, 1)
+            local val = math.floor(min + (max - min) * rel)
+            fill.Size = UDim2.new(rel, 0, 1, 0)
+            label.Text = text .. ": " .. val
+            callback(val)
+        end
+    end)
+end
+
+local function MakeButton(tab, text, callback)
+    local btn = Instance.new("TextButton", tab.Page)
+    btn.Size = UDim2.new(1, -6, 0, 36)
+    btn.BackgroundColor3 = Color3.fromRGB(48, 28, 90)
+    btn.Text = text
+    btn.TextColor3 = Color3.fromRGB(225, 205, 255)
+    btn.TextSize = 13
+    btn.Font = Enum.Font.GothamMedium
+    Instance.new("UICorner", btn).CornerRadius = UDim.new(0, 7)
+    btn.MouseButton1Click:Connect(callback)
+end
+
+local Combat = MakeTab("Combat", "⚔")
+local Farm   = MakeTab("Farm", "🌾")
+local TP     = MakeTab("Teleport", "🌀")
+local Visual = MakeTab("Visual", "👁")
+local ConfigTab = MakeTab("Config", "⚙")
+
+MakeToggle(Combat, "Kill Aura", false, function(v) Config.KillAura = v end)
+MakeSlider(Combat, "Kill Aura Range", 20, 120, 60, function(v) Config.KillAuraRange = v end)
+MakeToggle(Combat, "Super Punch (1 Hit)", false, function(v) Config.SuperPunch = v end)
+MakeToggle(Combat, "Bring NPC", false, function(v) Config.BringNPC = v end)
+MakeToggle(Combat, "Attack Players", false, function(v) Config.AttackPlayers = v end)
+
+MakeToggle(Farm, "Auto Farm NPC", false, function(v) Config.AutoFarm = v end)
+
+local Places = {
+    ["Start Island"] = CFrame.new(1103, 16, 1230),
+    ["Jungle"] = CFrame.new(-1618, 36, 149),
+    ["Pirate Village"] = CFrame.new(-1181, 4, 3803),
+    ["Desert"] = CFrame.new(1094, 6, 4319),
+    ["Frozen Village"] = CFrame.new(1197, 27, -1450),
+    ["Middle Town"] = CFrame.new(-655, 7, 1579),
+    ["Colosseum"] = CFrame.new(-1576, 7, -2985),
+    ["Skylands"] = CFrame.new(-4813, 717, -2360),
+    ["Fountain City"] = CFrame.new(5254, 16, 4019),
+    ["Castle on the Sea"] = CFrame.new(-5076, 314, -3153)
+}
+for name, cf in pairs(Places) do
+    MakeButton(TP, "TP → " .. name, function()
+        Refresh()
+        if Root then
+            Root.Anchored = true
+            Root.CFrame = cf
+            task.wait(0.1)
+            Root.Anchored = false
+            Root.Velocity = Vector3.zero
+        end
+    end)
+end
+
+MakeToggle(Visual, "ESP NPCs", false, function(v) Config.ESP = v end)
+MakeToggle(Visual, "ESP Players", false, function(v) Config.ESPPlayers = v end)
+
+MakeToggle(ConfigTab, "FPS Boost", false, function(v)
+    Config.FPSBoost = v
+    if v then
+        pcall(function()
+            settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
+        end)
+        Lighting.GlobalShadows = false
+        Lighting.FogEnd = 1000
+        Lighting.Brightness = 2
+        for _, fx in ipairs(Lighting:GetChildren()) do
+            if fx:IsA("BlurEffect") or fx:IsA("BloomEffect") or fx:IsA("SunRaysEffect") or fx:IsA("DepthOfFieldEffect") then
+                fx.Enabled = false
+            end
+        end
+    else
+        pcall(function() settings().Rendering.QualityLevel = Enum.QualityLevel.Automatic end)
+        Lighting.GlobalShadows = true
+        Lighting.FogEnd = 100000
+    end
+end)
+
+MakeToggle(ConfigTab, "Infinite Jump", false, function(v) Config.InfiniteJump = v end)
+MakeToggle(ConfigTab, "Noclip", false, function(v) Config.Noclip = v end)
+MakeSlider(ConfigTab, "WalkSpeed", 16, 200, 16, function(v)
+    Config.Speed = v
+    if Humanoid then Humanoid.WalkSpeed = v end
+end)
+
+-- ================= FUNÇÕES =================
+local function IsNPC(model)
+    if not model or not model:IsA("Model") then return false end
+    if model == Character then return false end
+    if Players:GetPlayerFromCharacter(model) then return false end
+    local hum = model:FindFirstChildOfClass("Humanoid")
+    local hrp = model:FindFirstChild("HumanoidRootPart") or model:FindFirstChild("UpperTorso")
+    return hum and hrp and hum.Health > 0
+end
+
+local function GetAllNPCs()
+    local list = {}
+    for _, obj in ipairs(workspace:GetChildren()) do
+        if IsNPC(obj) then table.insert(list, obj) end
+        if obj:IsA("Folder") or obj:IsA("Model") then
+            for _, child in ipairs(obj:GetChildren()) do
+                if IsNPC(child) then table.insert(list, child) end
+            end
+        end
+    end
+    return list
+end
+
+task.spawn(function()
+    while ScreenGui.Parent do
+        task.wait(0.12)
+        if not (Config.KillAura or Config.AutoFarm or Config.AttackPlayers) then continue end
+        Refresh()
+        if not Root or not Character then continue end
+
+        local function Hit(target)
+            local hrp = target:FindFirstChild("HumanoidRootPart") or target:FindFirstChild("UpperTorso")
+            local hum = target:FindFirstChildOfClass("Humanoid")
+            if not hrp or not hum or hum.Health <= 0 then return end
+            local dist = (hrp.Position - Root.Position).Magnitude
+            if dist > Config.KillAuraRange then return end
+
+            if Config.BringNPC then
+                hrp.CFrame = Root.CFrame * CFrame.new(0, 0, -4)
+            end
+
+            if Config.SuperPunch then
+                hum.Health = 0
+                return
+            end
+
+            local tool = Character:FindFirstChildOfClass("Tool")
+            if tool then pcall(function() tool:Activate() end) end
+            pcall(function()
+                VirtualUser:CaptureController()
+                VirtualUser:ClickButton1(Vector2.new())
+            end)
+        end
+
+        if Config.KillAura or Config.AutoFarm then
+            for _, npc in ipairs(GetAllNPCs()) do
+                Hit(npc)
+            end
+        end
+
+        if Config.AttackPlayers then
+            for _, plr in ipairs(Players:GetPlayers()) do
+                if plr ~= LocalPlayer and plr.Character then
+                    Hit(plr.Character)
+                end
+            end
+        end
+    end
+end)
+
+local ESPFolder = Instance.new("Folder")
+ESPFolder.Name = "FantasmaESP"
+ESPFolder.Parent = CoreGui
+
+task.spawn(function()
+    while ScreenGui.Parent do
+        task.wait(0.4)
+        ESPFolder:ClearAllChildren()
+        if not (Config.ESP or Config.ESPPlayers) then continue end
+        Refresh()
+        if not Root then continue end
+
+        if Config.ESP then
+            for _, npc in ipairs(GetAllNPCs()) do
+                local hrp = npc:FindFirstChild("HumanoidRootPart") or npc:FindFirstChild("UpperTorso")
+                if hrp and (hrp.Position - Root.Position).Magnitude < 2000 then
+                    local bb = Instance.new("BillboardGui")
+                    bb.Adornee = hrp
+                    bb.Size = UDim2.new(0, 120, 0, 34)
+                    bb.StudsOffset = Vector3.new(0, 3.2, 0)
+                    bb.AlwaysOnTop = true
+                    bb.Parent = ESPFolder
+                    local txt = Instance.new("TextLabel", bb)
+                    txt.Size = UDim2.new(1, 0, 1, 0)
+                    txt.BackgroundTransparency = 1
+                    txt.Text = npc.Name
+                    txt.TextColor3 = Color3.fromRGB(180, 100, 255)
+                    txt.TextStrokeTransparency = 0.4
+                    txt.TextSize = 13
+                    txt.Font = Enum.Font.GothamBold
+                end
+            end
+        end
+
+        if Config.ESPPlayers then
+            for _, plr in ipairs(Players:GetPlayers()) do
+                if plr ~= LocalPlayer and plr.Character then
+                    local hrp = plr.Character:FindFirstChild("HumanoidRootPart")
+                    if hrp and (hrp.Position - Root.Position).Magnitude < 2000 then
+                        local bb = Instance.new("BillboardGui")
+                        bb.Adornee = hrp
+                        bb.Size = UDim2.new(0, 120, 0, 34)
+                        bb.StudsOffset = Vector3.new(0, 3.2, 0)
+                        bb.AlwaysOnTop = true
+                        bb.Parent = ESPFolder
+                        local txt = Instance.new("TextLabel", bb)
+                        txt.Size = UDim2.new(1, 0, 1, 0)
+                        txt.BackgroundTransparency = 1
+                        txt.Text = plr.Name
+                        txt.TextColor3 = Color3.fromRGB(255, 75, 75)
+                        txt.TextStrokeTransparency = 0.4
+                        txt.TextSize = 13
+                        txt.Font = Enum.Font.GothamBold
+                    end
+                end
+            end
+        end
+    end
+end)
+
+RunService.Heartbeat:Connect(function()
+    if not Character or not Humanoid then return end
+    if Config.InfiniteJump and UserInputService:IsKeyDown(Enum.KeyCode.Space) then
+        Humanoid:ChangeState(Enum.HumanoidStateType.Jumping)
+    end
+    if Config.Noclip then
+        for _, p in ipairs(Character:GetChildren()) do
+            if p:IsA("BasePart") then p.CanCollide = false end
+        end
+    end
+    if Humanoid.WalkSpeed ~= Config.Speed then
+        Humanoid.WalkSpeed = Config.Speed
+    end
+end)
+
+print(" cfm hub carregado")
